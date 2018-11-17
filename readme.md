@@ -146,6 +146,23 @@ Con ```th:each```, tenemos disponibles varios datos sobre la iteración:
 </th:block>
 ````
 
+### ```th:src``` y ``th:href``
+Rellena el src o href  de un elemento, por ejemplo:
+
+```html
+<img th:src="${not (#strings.isEmpty(producto.imagen))} ? ${producto.imagen} : 'http://placehold.it/48x48'" class="img-responsive icono-categoria" alt="imagen" /></td>
+```
+### ```th:data-*```
+
+Se utilizan para rellenar los valores de los atributos de HTML5 ``data-*``, válidos para interaccionar con Javascript.
+
+### ``th:class``, ``th:classappend`` y ``th:styleappend``
+
+Nos permiten manejar clases CSS utilizando expresiones de Thymeleaf 
+
+### ``th:field`` y ``th:object``
+
+Nos permiten asociar el _Command Object_ a un formulario y los campos al formulario. Ver [Formularios]()
 
 
 ### Expresiones básicas
@@ -182,11 +199,115 @@ Thymeleaf + Spring nos ofrecen una serie de expresiones que se pueden combinar c
     </div>
     ```
    
-* Expresiones de mensaje: ```#{var} ```   
-* Expresiones de enlaces: ```@{var} ```   
-* Expresiones de fragmentos: ```~{var} ```  
+* Expresiones de mensaje: ```#{var} ```
+   
+* Expresiones de enlaces: ```@{var} ```
+    
+    Sirven para generar enlaces con Thymeleaf. Se utilizan en las etiquetas que tienen sentido ``<a>``, ``<img>``, ``<script>``y ``<link>``. Para utilizarlas usamos ``th:href``y ``th:src``. Atendiendo al tipo de enlace que queresmo distinguimos:
+    
+    * Absolutas
+    * Relativas
+        * A la página
+            * Con variables en parámetro
+            ```html
+            <th:block th:each="categoria: ${categorias}">
+                <li>
+                    <a th:href="@{/(idCategoria=${categoria.id})}"
+                       th:text="${#strings.concat('Filtrar por', categoria.nombre)}"
+                       data-toggle="dropdown"
+                       role="button"
+                       aria-haspopup="true"
+                       aria-expanded="false">
+                    </a>
+                </li>
+            </th:block>  
+            ```        
+            * Con variables en el _path_
+            ```html
+            <td>
+                <a th:text="${producto.nombre}"
+                   th:href="@{/{variable}(variable=${producto.id})}">
+                    No se pudo recuperar el nombre del producto.
+                </a>
+            </td>
+            ```
+        * Al contexto
+        * Al servidor
+        * Al protocolo
+   
+* Expresiones de fragmentos: ```~{var} ``` 
+
+### Formularios
+
+* Spring ofrece funcionalidades para el manejo de formularios, a traves de un objeto _Command Object_
+* El flujo de un formulario con Spring MVC sigue los siguientes pasos:
+    1. Enviar ``@GetMapping``, añadir al modelo un objeto ``Model`` vacío.
+       ```java
+           /**
+                * Método que añadirá o editará un producto
+                *
+                * @param model Command Object para el formulario.
+                * @return Dirección de la plantilla
+                */
+               @GetMapping("/editar/{id}")
+               public String upsertProducto(Model model, @PathVariable(name = "id", required = false) Long id) {
+                   Producto p= productoService.findById(id);
+                   if (p!=null)
+                       model.addAttribute("producto", productoService.findById(id));
+                   else
+                       model.addAttribute("producto", Producto.builder().build());
+           
+                   return "productos/upsert";
+           
+               }
+        ```
+    1. Crear una plantilla, valiendonos de las etiquetas ``th:field`` y ``th:object`` para bindear los datos. con el _Command Object_
+        ```html
+         <form method="post" action="#"
+                          th:action="@{/productos/save}" th:object="${producto}">
+                        <h1>
+                            Nuevo producto
+                        </h1>
+                        <div class="form-group">
+                            <label for="nombre">Nombre</label> <input type="text"
+                                                                      class="form-control" id="nombre" 
+                                                                       placeholder="Nombre"
+                                                                      th:field="*{nombre}" />  
+                          <...> 
+        ```
+    1. Dirigimos el ``action`` del formulario a la misma URL con ``@PostMapping``, con el _Command Object_. Se recoge mediante la anotación ``@ModelAttribute("nombre")`
+        ```java
+           /**
+             * Método que maneja el guardado de un formulario (procesa los submit de los formularios)
+             *
+             * @param producto Elemento del cuerpo del <code>POST</code>
+             * @param model    Command Object del formulario.
+             * @return Redirección a la lista.
+             */
+            @PostMapping("/upsert")
+            public String handleSubmitForm(Producto producto, Model model) {
+                productoService.save(producto);
+                return "redirect:/productos";
+            }
+        ```
+    1. Dirigir, generalmente hacia un listado.
+
+### Validación
+
+Podemos añadir dentro de nuestro método ``POST`` como argumento un objeto de tipo ``org.springframework.validation.BindingResult`` que Spring rellenará con los datos de errores.
+Existen herramientas de Thymeleaf para controlar errores.
+```html
+#fields.hasHerrors('')
+th:errors
+```
+
+### Ejemplo de manejo de ficheros.
+
+
 
 ### Integración con Spring Security
+
+Pendiente.
 
 ## Bibliografia y recursos.
 
